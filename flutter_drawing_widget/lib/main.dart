@@ -13,130 +13,225 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a blue toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme:
-            ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 12, 1, 60)),
-        useMaterial3: true,
-      ),
-      home: const DrawingWidget(title: 'Flutter Demo Home Page'),
-    );
+        title: 'Flutter Drawing Widget',
+        theme: ThemeData(
+          // This is the theme of your application.
+          //
+          // TRY THIS: Try running your application with "flutter run". You'll see
+          // the application has a blue toolbar. Then, without quitting the app,
+          // try changing the seedColor in the colorScheme below to Colors.green
+          // and then invoke "hot reload" (save your changes or press the "hot
+          // reload" button in a Flutter-supported IDE, or press "r" if you used
+          // the command line to start the app).
+          //
+          // Notice that the counter didn't reset back to zero; the application
+          // state is not lost during the reload. To reset the state, use hot
+          // restart instead.
+          //
+          // This works for code too, not just values: Most code changes can be
+          // tested with just a hot reload.
+          colorScheme:
+              ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 12, 1, 60)),
+          useMaterial3: true,
+        ),
+        home: Container(
+            color: Colors.blue,
+            child: DrawingCanvas(
+                strokeWidth: 10, color: Colors.black, fill: false)));
   }
 }
 
-class DrawingWidget extends StatefulWidget {
-  const DrawingWidget({super.key, required this.title});
+class DrawingCanvas extends StatefulWidget {
+  final double strokeWidth;
+  final Color color;
+  final bool fill;
 
-  final String title;
+  DrawingCanvas(
+      {this.strokeWidth = 5, this.color = Colors.blue, this.fill = false});
 
   @override
-  State<DrawingWidget> createState() => _DrawingWidgetState();
+  _DrawingCanvasState createState() => _DrawingCanvasState();
 }
 
-class _DrawingWidgetState extends State<DrawingWidget> {
-  List<DrawingPoint> _DrawingPointList = [];
+class _DrawingCanvasState extends State<DrawingCanvas> {
+  List<List<Offset>> objectList = <List<Offset>>[];
+  List<Offset> newDrawing = <Offset>[];
 
-  void _deleteDrawing() {
+  void _drawPen(Offset point) {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _DrawingPointList = [];
+      print(newDrawing.length);
+
+      newDrawing.add(point);
     });
   }
 
-  void _addDrawingPoint(Offset offset) {
+  void _touchPen(Offset point) {
     setState(() {
-      _DrawingPointList.add(DrawingPoint(
-          offset,
-          Paint()
-            ..color = Colors.black
-            ..isAntiAlias = true
-            ..strokeWidth = 5
-            ..strokeCap = StrokeCap.round));
+      newDrawing = <Offset>[];
+      newDrawing.add(point);
+    });
+  }
+
+  void _raisePen() {
+    setState(() {
+      objectList.add(newDrawing);
+      newDrawing = <Offset>[];
+    });
+  }
+
+  void _undo() {
+    setState(() {
+      objectList = objectList.getRange(0, objectList.length - 2).toList();
+      print(objectList.length);
+    });
+  }
+
+  void _empty() {
+    setState(() {
+      objectList.clear();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Container(
-                height: MediaQuery.of(context).size.height - 60,
-                width: MediaQuery.of(context).size.width,
-                color: Colors.grey,
-                child: GestureDetector(
-                  onPanStart: (details) {
-                    print("PanStart");
-                    print(details.globalPosition);
-                    print(details.localPosition);
-                  },
-                  onPanUpdate: (details) {
-                    _addDrawingPoint(details.localPosition);
-                  },
-                  onPanEnd: (details) {
-                    print("end");
-                  },
-                  child: CustomPaint(
-                      size: const Size(300, 300),
-                      painter: _DrawingPainter(_DrawingPointList),
-                      child: Container(
-                        height: MediaQuery.of(context).size.height,
-                        width: MediaQuery.of(context).size.width,
-                      )),
-                ))
-          ],
-        ),
+    return GestureDetector(
+      onPanStart: (details) {
+        RenderBox? box = context.findRenderObject() as RenderBox?;
+        if (box != null) {
+          Offset localPosition = box.globalToLocal(details.globalPosition);
+          _touchPen(localPosition);
+        }
+      },
+      onPanUpdate: (details) {
+        RenderBox? box = context.findRenderObject() as RenderBox?;
+        if (box != null) {
+          Offset localPosition = box.globalToLocal(details.globalPosition);
+          _drawPen(localPosition);
+        }
+      },
+      onPanEnd: (details) {
+        _raisePen();
+      },
+      onPanCancel: () {
+        _raisePen();
+      },
+      child: Stack(
+        children: [
+          CustomPaint(
+            painter: PenDrawingPainter(
+              pointList: newDrawing,
+              color: widget.color,
+              strokeWidth: widget.strokeWidth,
+              fill: widget.fill,
+            ),
+            child: Container(),
+          ),
+          CustomPaint(
+            painter: ObjectPainter(
+              objectList: objectList,
+              color: widget.color,
+              strokeWidth: widget.strokeWidth,
+              fill: widget.fill,
+            ),
+            child: Container(),
+          ),
+          Row(
+            children: [
+              FloatingActionButton(
+                onPressed: _empty,
+                child: const Icon(Icons.delete),
+              ),
+              FloatingActionButton(
+                onPressed: _undo,
+                child: const Icon(Icons.arrow_back_rounded),
+              )
+            ],
+          )
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _deleteDrawing,
-        tooltip: 'Clear',
-        child: const Icon(Icons.delete),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
 
-class _DrawingPainter extends CustomPainter {
-  final List<DrawingPoint> drawingPoints;
+class PenDrawingPainter extends CustomPainter {
+  List<Offset> pointList = <Offset>[];
+  final double strokeWidth;
+  final Color color;
+  final bool fill;
 
-  _DrawingPainter(this.drawingPoints);
+  PenDrawingPainter(
+      {required this.pointList,
+      required this.strokeWidth,
+      required this.color,
+      required this.fill});
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (int i = 0; i < drawingPoints.length - 2; i++) {
-      canvas.drawLine(drawingPoints[i].offset, drawingPoints[i + 1].offset,
-          drawingPoints[i].paint);
+    Paint paint = Paint()
+      ..color = color
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = strokeWidth
+      ..isAntiAlias = true;
+    Path path = Path();
+    if (pointList.isNotEmpty) {
+      path.moveTo(pointList[0].dx, pointList[0].dy);
+      for (int j = 1; (j < pointList.length); j++) {
+        path.lineTo(pointList[j].dx, pointList[j].dy);
+      }
     }
+
+    if (fill) {
+      paint.style = PaintingStyle.fill;
+    } else {
+      paint.style = PaintingStyle.stroke;
+    }
+    canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(PenDrawingPainter oldDelegate) =>
+      oldDelegate.pointList.length == pointList.length;
 }
 
-class DrawingPoint {
-  Offset offset;
-  Paint paint;
+class ObjectPainter extends CustomPainter {
+  List<List<Offset>> objectList = <List<Offset>>[];
+  final double strokeWidth;
+  final Color color;
+  final bool fill;
 
-  DrawingPoint(this.offset, this.paint);
+  ObjectPainter(
+      {required this.objectList,
+      required this.strokeWidth,
+      required this.color,
+      required this.fill});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()
+      ..color = color
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = strokeWidth
+      ..isAntiAlias = true;
+    Path path = Path();
+    if (objectList.isNotEmpty) {
+      for (int i = 0; i < objectList.length; i++) {
+        if (objectList[i].isNotEmpty) {
+          path.moveTo(objectList[i][0].dx, objectList[i][0].dy);
+          for (int j = 1; (j < objectList[i].length - 1); j++) {
+            path.lineTo(objectList[i][j].dx, objectList[i][j].dy);
+          }
+          if (fill) {
+            paint.style = PaintingStyle.fill;
+          } else {
+            paint.style = PaintingStyle.stroke;
+          }
+        }
+      }
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(ObjectPainter oldDelegate) =>
+      oldDelegate.objectList.length == objectList.length;
 }
