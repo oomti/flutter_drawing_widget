@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 void main() {
   runApp(const MyApp());
@@ -8,6 +9,7 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+  @override
 
   // This widget is the root of your application.
   @override
@@ -34,10 +36,70 @@ class MyApp extends StatelessWidget {
               ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 12, 1, 60)),
           useMaterial3: true,
         ),
-        home: Container(
-            color: Colors.blue,
-            child: DrawingCanvas(
-                strokeWidth: 10, color: Colors.black, fill: false)));
+        home: DrawingWrapper());
+  }
+}
+
+class DrawingWrapper extends StatefulWidget {
+  const DrawingWrapper({super.key});
+
+  @override
+  _DrawingWrapperState createState() => _DrawingWrapperState();
+}
+
+class _DrawingWrapperState extends State<DrawingWrapper> {
+  Color strokeColor = Colors.black;
+  double strokeWidth = 5;
+
+  void _setColor(Color color) {
+    setState(() {
+      strokeColor = color;
+    });
+  }
+
+  void _setStrokeWidth(double newStrokeWidth) {
+    setState(() {
+      strokeWidth = newStrokeWidth;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        color: Colors.white,
+        child: Stack(children: [
+          DrawingCanvas(
+              strokeWidth: strokeWidth, color: strokeColor, fill: false),
+          Row(
+            children: [
+              IconButton(
+                color: Colors.blue,
+                onPressed: () => {_setColor(Colors.blue)},
+                icon: const Icon(Icons.water_drop),
+              ),
+              IconButton(
+                color: Colors.red,
+                onPressed: () => {_setColor(Colors.red)},
+                icon: const Icon(Icons.fire_truck),
+              ),
+              IconButton(
+                color: Colors.amber,
+                onPressed: () => {_setColor(Colors.amber)},
+                icon: const Icon(Icons.rocket_launch),
+              ),
+              IconButton(
+                color: Colors.green,
+                onPressed: () => {_setColor(Colors.green)},
+                icon: const Icon(Icons.travel_explore),
+              ),
+              IconButton(
+                color: Colors.purple,
+                onPressed: () => {_setColor(Colors.purple)},
+                icon: const Icon(Icons.dangerous),
+              )
+            ],
+          )
+        ]));
   }
 }
 
@@ -81,7 +143,9 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
 
   void _undo() {
     setState(() {
-      objectList = objectList.getRange(0, objectList.length - 2).toList();
+      objectList = objectList
+          .getRange(0, objectList.length > 1 ? objectList.length - 2 : 1)
+          .toList();
       print(objectList.length);
     });
   }
@@ -136,6 +200,8 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
             child: Container(),
           ),
           Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               FloatingActionButton(
                 onPressed: _empty,
@@ -151,6 +217,17 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
       ),
     );
   }
+}
+
+class drawingObject {
+  List<Offset> pointList = <Offset>[];
+  Paint paint = Paint()
+    ..color = Colors.black
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 2
+    ..isAntiAlias = true;
+
+  drawingObject({required this.pointList, required this.paint});
 }
 
 class PenDrawingPainter extends CustomPainter {
