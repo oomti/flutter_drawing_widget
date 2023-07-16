@@ -1,7 +1,4 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,11 +29,11 @@ class MyApp extends StatelessWidget {
           //
           // This works for code too, not just values: Most code changes can be
           // tested with just a hot reload.
-          colorScheme:
-              ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 12, 1, 60)),
+          colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color.fromARGB(255, 12, 1, 60)),
           useMaterial3: true,
         ),
-        home: DrawingWrapper());
+        home: const DrawingWrapper());
   }
 }
 
@@ -117,12 +114,11 @@ class DrawingCanvas extends StatefulWidget {
 
 class _DrawingCanvasState extends State<DrawingCanvas> {
   List<List<Offset>> objectList = <List<Offset>>[];
+  List<DrawingObject> drawingObjectList = <DrawingObject>[];
   List<Offset> newDrawing = <Offset>[];
 
   void _drawPen(Offset point) {
     setState(() {
-      print(newDrawing.length);
-
       newDrawing.add(point);
     });
   }
@@ -137,22 +133,29 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
   void _raisePen() {
     setState(() {
       objectList.add(newDrawing);
+      drawingObjectList.add(DrawingObject(
+          pointList: newDrawing,
+          paint: Paint()
+            ..color = widget.color
+            ..strokeWidth = widget.strokeWidth
+            ..style = PaintingStyle.stroke
+            ..isAntiAlias = true));
       newDrawing = <Offset>[];
     });
   }
 
   void _undo() {
     setState(() {
-      objectList = objectList
-          .getRange(0, objectList.length > 1 ? objectList.length - 2 : 1)
+      drawingObjectList = drawingObjectList
+          .getRange(0,
+              drawingObjectList.length > 1 ? drawingObjectList.length - 2 : 1)
           .toList();
-      print(objectList.length);
     });
   }
 
   void _empty() {
     setState(() {
-      objectList.clear();
+      drawingObjectList.clear();
     });
   }
 
@@ -192,10 +195,7 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
           ),
           CustomPaint(
             painter: ObjectPainter(
-              objectList: objectList,
-              color: widget.color,
-              strokeWidth: widget.strokeWidth,
-              fill: widget.fill,
+              objectList: drawingObjectList,
             ),
             child: Container(),
           ),
@@ -219,15 +219,16 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
   }
 }
 
-class drawingObject {
+class DrawingObject {
   List<Offset> pointList = <Offset>[];
   Paint paint = Paint()
     ..color = Colors.black
     ..strokeCap = StrokeCap.round
     ..strokeWidth = 2
-    ..isAntiAlias = true;
+    ..isAntiAlias = true
+    ..style = PaintingStyle.stroke;
 
-  drawingObject({required this.pointList, required this.paint});
+  DrawingObject({required this.pointList, required this.paint});
 }
 
 class PenDrawingPainter extends CustomPainter {
@@ -271,41 +272,29 @@ class PenDrawingPainter extends CustomPainter {
 }
 
 class ObjectPainter extends CustomPainter {
-  List<List<Offset>> objectList = <List<Offset>>[];
-  final double strokeWidth;
-  final Color color;
-  final bool fill;
+  List<DrawingObject> objectList = <DrawingObject>[];
 
-  ObjectPainter(
-      {required this.objectList,
-      required this.strokeWidth,
-      required this.color,
-      required this.fill});
+  ObjectPainter({
+    required this.objectList,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    Paint paint = Paint()
-      ..color = color
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = strokeWidth
-      ..isAntiAlias = true;
-    Path path = Path();
     if (objectList.isNotEmpty) {
       for (int i = 0; i < objectList.length; i++) {
-        if (objectList[i].isNotEmpty) {
-          path.moveTo(objectList[i][0].dx, objectList[i][0].dy);
-          for (int j = 1; (j < objectList[i].length - 1); j++) {
-            path.lineTo(objectList[i][j].dx, objectList[i][j].dy);
-          }
-          if (fill) {
-            paint.style = PaintingStyle.fill;
-          } else {
-            paint.style = PaintingStyle.stroke;
+        Path path = Path();
+        Paint paint = objectList[i].paint;
+        if (objectList[i].pointList.isNotEmpty) {
+          path.moveTo(
+              objectList[i].pointList[0].dx, objectList[i].pointList[0].dy);
+          for (int j = 1; (j < objectList[i].pointList.length - 1); j++) {
+            path.lineTo(
+                objectList[i].pointList[j].dx, objectList[i].pointList[j].dy);
           }
         }
+        canvas.drawPath(path, paint);
       }
     }
-    canvas.drawPath(path, paint);
   }
 
   @override
