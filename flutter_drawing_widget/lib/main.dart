@@ -161,59 +161,65 @@ class _DrawingCanvasState extends State<DrawingCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanStart: (details) {
-        RenderBox? box = context.findRenderObject() as RenderBox?;
-        if (box != null) {
-          Offset localPosition = box.globalToLocal(details.globalPosition);
-          _touchPen(localPosition);
-        }
-      },
-      onPanUpdate: (details) {
-        RenderBox? box = context.findRenderObject() as RenderBox?;
-        if (box != null) {
-          Offset localPosition = box.globalToLocal(details.globalPosition);
-          _drawPen(localPosition);
-        }
-      },
-      onPanEnd: (details) {
-        _raisePen();
-      },
-      onPanCancel: () {
-        _raisePen();
-      },
-      child: Stack(
-        children: [
-          CustomPaint(
-            painter: PenDrawingPainter(
-              pointList: newDrawing,
-              color: widget.color,
-              strokeWidth: widget.strokeWidth,
-              fill: widget.fill,
-            ),
-            child: Container(),
-          ),
-          CustomPaint(
-            painter: ObjectPainter(
-              objectList: drawingObjectList,
-            ),
-            child: Container(),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FloatingActionButton(
-                onPressed: _empty,
-                child: const Icon(Icons.delete),
+    return InteractiveViewer(
+      onInteractionUpdate: (context) => {print(context.focalPoint)},
+      constrained: false,
+      clipBehavior: Clip.antiAlias,
+      trackpadScrollCausesScale: true,
+      child: GestureDetector(
+        onPanStart: (details) {
+          RenderBox? box = context.findRenderObject() as RenderBox?;
+          if (box != null) {
+            Offset localPosition = box.globalToLocal(details.globalPosition);
+            _touchPen(localPosition);
+          }
+        },
+        onPanUpdate: (details) {
+          RenderBox? box = context.findRenderObject() as RenderBox?;
+          if (box != null) {
+            Offset localPosition = box.globalToLocal(details.globalPosition);
+            _drawPen(localPosition);
+          }
+        },
+        onPanEnd: (details) {
+          _raisePen();
+        },
+        onPanCancel: () {
+          _raisePen();
+        },
+        child: Stack(
+          children: [
+            CustomPaint(
+              size: const Size(1000, 1000),
+              painter: PenDrawingPainter(
+                pointList: newDrawing,
+                color: widget.color,
+                strokeWidth: widget.strokeWidth,
+                fill: widget.fill,
               ),
-              FloatingActionButton(
-                onPressed: _undo,
-                child: const Icon(Icons.arrow_back_rounded),
-              )
-            ],
-          )
-        ],
+            ),
+            CustomPaint(
+              size: const Size(5000, 5000),
+              painter: ObjectPainter(
+                objectList: drawingObjectList,
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FloatingActionButton(
+                  onPressed: _empty,
+                  child: const Icon(Icons.delete),
+                ),
+                FloatingActionButton(
+                  onPressed: _undo,
+                  child: const Icon(Icons.arrow_back_rounded),
+                )
+              ],
+            )
+          ],
+        ),
       ),
     );
   }
